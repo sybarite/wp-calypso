@@ -40,6 +40,7 @@ import {
 	isSiteAutomatedTransfer,
 	hasSitePendingAutomatedTransfer,
 } from 'state/selectors';
+import { hasFeature } from 'state/sites/plans/selectors';
 import {
 	getCustomizerUrl,
 	getSite,
@@ -49,6 +50,7 @@ import {
 	isSitePreviewable,
 } from 'state/sites/selectors';
 import { getStatsPathForTab } from 'lib/route';
+import { FEATURE_REPUBLICIZE } from 'lib/plans/constants';
 import { getAutomatedTransferStatus } from 'state/automated-transfer/selectors';
 import { transferStates } from 'state/automated-transfer/constants';
 import { itemLinkMatches } from './utils';
@@ -435,10 +437,17 @@ export class MySitesSidebar extends Component {
 	};
 
 	sharing() {
-		const { isJetpack, isSharingEnabledOnJetpackSite, path, site } = this.props;
+		const {
+			isJetpack,
+			isSharingEnabledOnJetpackSite,
+			path,
+			site,
+			canUserManageOptions,
+			hasRepublicizeFeature,
+		} = this.props;
 		const sharingLink = '/sharing' + this.props.siteSuffix;
 
-		if ( site && ! this.props.canUserPublishPosts ) {
+		if ( site && ! this.props.canUserPublishPosts && ! canUserManageOptions ) {
 			return null;
 		}
 
@@ -447,6 +456,10 @@ export class MySitesSidebar extends Component {
 		}
 
 		if ( isJetpack && ! isSharingEnabledOnJetpackSite ) {
+			return null;
+		}
+
+		if ( ! hasRepublicizeFeature && ! canUserManageOptions ) {
 			return null;
 		}
 
@@ -721,6 +734,7 @@ function mapStateToProps( state ) {
 		currentUser,
 		customizeUrl: getCustomizerUrl( state, selectedSiteId ),
 		hasJetpackSites: hasJetpackSites( state ),
+		hasRepublicizeFeature: hasFeature( state, siteId, FEATURE_REPUBLICIZE ),
 		isDomainOnly: isDomainOnlySite( state, selectedSiteId ),
 		isJetpack,
 		isPreviewable: isSitePreviewable( state, selectedSiteId ),
