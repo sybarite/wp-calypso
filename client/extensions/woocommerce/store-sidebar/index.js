@@ -16,20 +16,21 @@ import { localize } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import Count from 'components/count';
+import {
+	areCountsLoaded,
+	getCountProducts,
+	getCountNewOrders,
+	getCountPendingReviews,
+} from 'woocommerce/state/sites/data/counts/selectors';
 import {
 	areSettingsGeneralLoaded,
 	getStoreLocation,
 } from 'woocommerce/state/sites/settings/general/selectors';
-import { fetchOrders } from 'woocommerce/state/sites/orders/actions';
-import { fetchProducts } from 'woocommerce/state/sites/products/actions';
-import { fetchReviews } from 'woocommerce/state/sites/reviews/actions';
+import Count from 'components/count';
+import { fetchCounts } from 'woocommerce/state/sites/data/counts/actions';
 import { fetchSetupChoices } from 'woocommerce/state/sites/setup-choices/actions';
-import { getNewOrdersWithoutPayPalPending } from 'woocommerce/state/sites/orders/selectors';
 import { getSelectedSiteWithFallback } from 'woocommerce/state/sites/selectors';
 import { getSetStoreAddressDuringInitialSetup } from 'woocommerce/state/sites/setup-choices/selectors';
-import { getTotalProducts, areProductsLoaded } from 'woocommerce/state/sites/products/selectors';
-import { getTotalReviews } from 'woocommerce/state/sites/reviews/selectors';
 import { isStoreManagementSupportedInCalypsoForCountry } from 'woocommerce/lib/countries';
 import Sidebar from 'layout/sidebar';
 import SidebarButton from 'layout/sidebar/button';
@@ -45,34 +46,31 @@ class StoreSidebar extends Component {
 		site: PropTypes.object,
 	};
 
-	componentDidMount = () => {
-		const { productsLoaded, site } = this.props;
-
-		if ( site && site.ID ) {
-			this.fetchData( { siteId: site.ID, productsLoaded } );
-		}
-	};
-
-	componentWillReceiveProps = newProps => {
+	componentDidMount() {
 		const { site } = this.props;
 
-		const newSiteId = newProps.site ? newProps.site.ID : null;
-		const oldSiteId = site ? site.ID : null;
-
-		if ( newSiteId && oldSiteId !== newSiteId ) {
-			this.fetchData( { ...newProps, siteId: newSiteId } );
+		if ( site && site.ID ) {
+			this.fetchData();
 		}
-	};
+	}
 
-	fetchData = ( { siteId, productsLoaded } ) => {
-		this.props.fetchSetupChoices( siteId );
-		this.props.fetchOrders( siteId );
+	componentDidUpdate( prevProps ) {
+		const { site } = this.props;
+		const siteId = site ? site.ID : null;
+		const oldSiteId = prevProps.site ? prevProps.site.ID : null;
 
-		this.props.fetchReviews( siteId, { status: 'pending' } );
-
-		if ( ! productsLoaded ) {
-			this.props.fetchProducts( siteId, { page: 1 } );
+		if ( siteId && oldSiteId !== siteId ) {
+			this.fetchData();
 		}
+	}
+
+	fetchData = () => {
+		const { isLoaded, site } = this.props;
+		if ( ! isLoaded ) {
+			this.props.fetchCounts( site.ID );
+		}
+
+		this.props.fetchSetupChoices( site.ID );
 	};
 
 	isItemLinkSelected = paths => {
@@ -157,7 +155,7 @@ class StoreSidebar extends Component {
 	};
 
 	orders = () => {
-		const { orders, site, siteSuffix, translate } = this.props;
+		const { totalNewOrders, site, siteSuffix, translate } = this.props;
 		const link = '/store/orders' + siteSuffix;
 		const childLinks = [ '/store/order', '/store/orders' ];
 		const selected = this.isItemLinkSelected( childLinks );
@@ -169,7 +167,7 @@ class StoreSidebar extends Component {
 
 		return (
 			<SidebarItem className={ classes } icon="pages" label={ translate( 'Orders' ) } link={ link }>
-				{ orders.length ? <Count count={ orders.length } /> : null }
+				{ totalNewOrders ? <Count count={ totalNewOrders } /> : null }
 			</SidebarItem>
 		);
 	};
@@ -277,22 +275,22 @@ class StoreSidebar extends Component {
 }
 
 function mapStateToProps( state ) {
-	const finishedAddressSetup = getSetStoreAddressDuringInitialSetup( state );
-	const hasProducts = getTotalProducts( state ) > 0;
-	const orders = getNewOrdersWithoutPayPalPending( state );
-	const productsLoaded = areProductsLoaded( state );
 	const site = getSelectedSiteWithFallback( state );
 	const siteId = site ? site.ID : null;
-	const totalPendingReviews = getTotalReviews( state, { status: 'pending' } );
+	const finishedAddressSetup = getSetStoreAddressDuringInitialSetup( state );
+	const hasProducts = getCountProducts( state ) > 0;
+	const isLoaded = areCountsLoaded( state );
+	const totalNewOrders = getCountNewOrders( state );
+	const totalPendingReviews = getCountPendingReviews( state );
 	const settingsGeneralLoaded = areSettingsGeneralLoaded( state, siteId );
 	const storeLocation = getStoreLocation( state, siteId );
 
 	return {
 		finishedAddressSetup,
 		hasProducts,
-		orders,
+		isLoaded,
+		totalNewOrders,
 		totalPendingReviews,
-		productsLoaded,
 		settingsGeneralLoaded,
 		site,
 		siteId,
@@ -304,9 +302,7 @@ function mapStateToProps( state ) {
 function mapDispatchToProps( dispatch ) {
 	return bindActionCreators(
 		{
-			fetchOrders,
-			fetchProducts,
-			fetchReviews,
+			fetchCounts,
 			fetchSetupChoices,
 		},
 		dispatch
