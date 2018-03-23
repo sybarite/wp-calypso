@@ -16,7 +16,7 @@ import Card from 'components/card';
 import SiteSelector from 'components/site-selector';
 import { getCurrentUser, currentUserHasFlag } from 'state/current-user/selectors';
 import { DOMAINS_WITH_PLANS_ONLY } from 'state/current-user/constants';
-import { getSites, isSiteAutomatedTransfer, isDomainOnlySite } from 'state/selectors';
+import { getSites, isDomainOnlySite } from 'state/selectors';
 import Header from 'my-sites/domains/domain-management/components/header';
 import Main from 'components/main';
 import { domainManagementList, domainManagementTransfer } from 'my-sites/domains/paths';
@@ -51,9 +51,12 @@ class TransferToOtherSite extends React.Component {
 	}
 
 	isSiteEligible = site => {
+		// check if the site is Atomic from the site options
+		const isAtomic = get( site, 'options.is_automated_transfer', false );
+
 		return (
 			site.capabilities.manage_options &&
-			! ( site.jetpack && ! this.props.isAtomic ) && // allow Atomic but ban Jetpack sites
+			! ( site.jetpack && ! isAtomic ) &&
 			! get( site, 'options.is_domain_only', false ) &&
 			! ( this.props.domainsWithPlansOnly && get( site, 'plan.product_slug' ) === PLAN_FREE ) &&
 			site.ID !== this.props.selectedSite.ID
@@ -182,7 +185,6 @@ export default connect(
 		currentUser: getCurrentUser( state ),
 		domainsWithPlansOnly: currentUserHasFlag( state, DOMAINS_WITH_PLANS_ONLY ),
 		isDomainOnly: isDomainOnlySite( state, ownProps.selectedSite.ID ),
-		isAtomic: isSiteAutomatedTransfer( state, ownProps.selectedSite.ID ),
 		sites: getSites( state ),
 	} ),
 	{
