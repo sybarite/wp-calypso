@@ -13,6 +13,7 @@ import Gridicon from 'gridicons';
 /**
  * Internal dependencies
  */
+import config from 'config';
 import HeaderCake from 'components/header-cake';
 import Button from 'components/button';
 import Card from 'components/card';
@@ -50,6 +51,35 @@ class SelectBusinessType extends Component {
 
 	render() {
 		const { translate, siteId } = this.props;
+
+		let connectButton;
+
+		if ( config.isEnabled( 'google-my-business' ) ) {
+			connectButton = (
+				<GoogleMyBusinessConnectButton
+					onClick={ this.trackCreateMyListingClick }
+					onConnect={ this.handleConnect }
+				>
+					{ translate( 'Create My Listing', {
+						comment: 'Call to Action to add a business listing to Google My Business',
+					} ) }
+				</GoogleMyBusinessConnectButton>
+			);
+		} else {
+			connectButton = (
+				<Button
+					primary={ true }
+					href="https://www.google.com/business/"
+					target="_blank"
+					onClick={ this.trackCreateMyListingClick }
+				>
+					{ translate( 'Create My Listing', {
+						comment: 'Call to Action to add a business listing to Google My Business',
+					} ) }
+					<Gridicon icon="external" />
+				</Button>
+			);
+		}
 
 		return (
 			<div className="select-business-type">
@@ -90,16 +120,7 @@ class SelectBusinessType extends Component {
 							) }
 						</p>
 					</div>
-					<div className="select-business-type__cta-card-button-container">
-						<GoogleMyBusinessConnectButton
-							onClick={ this.trackCreateMyListingClick }
-							onConnect={ this.handleConnect }
-						>
-							{ translate( 'Create My Listing', {
-								comment: 'Call to Action to add a business listing to Google My Business',
-							} ) }
-						</GoogleMyBusinessConnectButton>
-					</div>
+					<div className="select-business-type__cta-card-button-container">{ connectButton }</div>
 				</Card>
 
 				<Card className="select-business-type__cta-card">
